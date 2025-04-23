@@ -1,145 +1,79 @@
 """
-generate_essay.py
+generate_essay_modular.py
 
-Interactive essay builder that uses your AI + Africa text archive to generate paragraph-by-paragraph reflective writing.
-Each paragraph is generated using semantically retrieved excerpts based on your input prompt.
-The script now includes automatic saving of the final essay and follow-up questions to user-specified .txt files.
+Modular version of the essay builder. Uses functions from utils.py.
+Builds reflective essays one paragraph at a time using your AI & Africa archive.
+Each section is generated based on semantically retrieved chunks and a polished prompt.
 
-Dependencies:
-- embedded_chunks.pkl (must contain id, text, tags, reasoning, and embedding)
-- Ollama running with LLaMA3 or other local model
+Includes automatic saving of the final essay + follow-up questions to user-specified .txt files.
 """
 
-import pandas as pd
-import torch
-from sentence_transformers import SentenceTransformer, util
-import requests
-import time
+import os
+from utils import load_archive, embed_query, get_top_chunks, format_chunks_as_context, query_llm
 
-followups = []  # global list, will store all follow-up questions across essay sections
+# Load embedded archive (DataFrame with id, text, tags, reasoning, embedding)
+data = load_archive("../data/processed/embedded_chunks.pkl")
 
-# Load data
-raw_data = pd.read_pickle("embedded_chunks.pkl")
-data = pd.DataFrame(raw_data)
 
-# Load model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Store the essay parts and follow-ups
+essay_sections = []
+followups = []
 
-# Ollama setup
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "llama3:8b"
+print("\nWelcome to the Modular Essay Builder ✍️")
+print("Build a reflective essay one part at a time.\n")
 
-def generate_essay_section(query, num_chunks=5):
-    query_embedding = model.encode(query, convert_to_tensor=True).cpu()
+while True:
+    query = input("Enter your next essay prompt or section idea (or type 'done' to finish):\n> ")
+    if query.strip().lower() in ["done", "n"]:
+        break
 
-    archive_embeddings = torch.stack([
-        torch.tensor(entry, dtype=torch.float32) for entry in data["embedding"]
-    ]).cpu()
+    print("\nGenerating essay section...\n")
+    query_embedding = embed_query(query)
+    top_chunks = get_top_chunks(query_embedding, data)
+    prompt = format_chunks_as_context(top_chunks, query)
+    result = query_llm(prompt)
 
-    similarities = util.cos_sim(query_embedding, archive_embeddings)[0]
-    top_indices = similarities.topk(num_chunks).indices.tolist()
-    retrieved = data.iloc[top_indices]
+    # Extract essay section and follow-ups using marker
+    if "--- FOLLOW-UP-BEGIN ---" in result:
+        essay_body, followup_block = result.split("--- FOLLOW-UP-BEGIN ---", 1)
+        section_text = f"[Prompt: {query}]\n{essay_body.strip()}"
+        fups = followup_block.strip()
+    else:
+        section_text = f"[Prompt: {query}]\n{result.strip()}"
+        fups = ""
 
-    context = "\n\n".join([
-        f"{entry['text']}\n(Tag: {entry['tags']})\n{entry['reasoning']}"
-        for _, entry in retrieved.iterrows()
-    ])
+    essay_sections.append(section_text)
+    if fups:
+        followups.append(fups)
 
-    prompt = f"""
-You are a reflective, critical narrator responding to the following user query:
-"{query}"
+    print("\n--- Essay Section ---\n")
+    print(section_text)
+    if fups:
+        print("\nFollow-up Questions:\n")
+        print(fups)
 
-Use the following annotated excerpts from an archive of African-centered writing to inform your response. Each excerpt includes a thematic tag and a short interpretive note (reasoning). Use but do not restate the tags in your response. Use the excerpts to paraphrase, synthesise, reflect, or argue, but do not refer to them as 'excerpts'. Integrate the ideas into your own voice. Prioritise clarity and contextual sensitivity. Respond in a thoughtful, essay-like tone.
+# Save outputs
+if essay_sections:
+    print("\nEssay complete. Where should I save the output?")
+    base_path = input("→ Enter folder path or press Enter to use current folder: ").strip()
+    filename = input("→ Enter filename base (no extension): ").strip()
 
-Speak with confidence — treat insights as established facts, not possibilities.
+    if not base_path:
+        base_path = os.getcwd()
+    os.makedirs(base_path, exist_ok=True)
 
-Include 2–3 follow-up questions for deeper reflection at the end.
+    essay_path = os.path.join(base_path, f"{filename}.txt")
+    fup_path = os.path.join(base_path, f"{filename}_followups.txt")
 
-{context}
+    final_essay = "\n\n".join(essay_sections)
 
-Your response:
-"""
+    with open(essay_path, "w", encoding="utf-8") as f:
+        f.write(final_essay)
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": MODEL_NAME,
-            "prompt": prompt,
-            "stream": False
-        }
-    )
+    with open(fup_path, "w", encoding="utf-8") as f:
+        f.write("\n\n".join(followups))
 
-    if response.status_code == 200:
-        response_text = response.json().get("response", "[No response returned]").strip()
-        # Extract follow-up questions (lines that start with 1., 2., etc.)
-        extracted = []
-        for line in response_text.splitlines():
-            if line.strip().startswith(("1.", "2.", "3.")):
-                extracted.append(line.strip())
-        # Add to global followups list
-        if extracted:
-            followups.extend(extracted)
-
-            return response_text
-        else:
-            return f"[Error: HTTP {response.status_code}]"
-        
-if __name__ == "__main__":
-    print("\nWelcome to the Essay Builder ✍️")
-    print("Build a reflective essay one part at a time.")
-
-    section_texts = []
-    follow_up_questions = []
-
-    while True:
-        query = input("\nEnter your next essay question or section idea (or type 'done' to finish):\n> ")
-        if query.strip().lower() in ["done", "n"]:
-            break
-
-        print("\nGenerating essay section... please wait...\n")
-        section = generate_essay_section(query)
-        print("\n--- Essay Section ---\n")
-        print(section)
-
-        section_texts.append(f"[Prompt: {query}]\n{section}")
-
-        # Extract follow-up questions (after last line break)
-        lines = section.strip().splitlines()
-        fups = [line for line in lines if line.strip().startswith("1.")]
-        if fups:
-            follow_up_questions.extend(lines[-3:])
-
-# After user types 'done', save the essay and follow-up questions
-print("\nEssay complete.")
-
-# Ask for full save path or leave blank
-save_path = input("→ Optional: Enter full folder path to save files (or press Enter to save in current directory): ").strip()
-
-# Ask for filename (no extension)
-filename_base = input("→ Enter filename base (no extension): ").strip()
-if not filename_base:
-    filename_base = "essay_output"
-
-# Create full file paths
-if save_path:
-    essay_path = f"{save_path.rstrip('/')}/{filename_base}.txt"
-    fup_path = f"{save_path.rstrip('/')}/{filename_base}_followups.txt"
+    print(f"\n✓ Essay saved to: {essay_path}")
+    print(f"✓ Follow-up questions saved to: {fup_path}")
 else:
-    essay_path = f"{filename_base}.txt"
-    fup_path = f"{filename_base}_followups.txt"
-
- # Combine all essay parts into final string
-final_essay = "\n\n".join(section_texts)
-   
-
-# Save full essay
-with open(essay_path, "w", encoding="utf-8") as f:
-    f.write(final_essay)
-
-# Save follow-up questions
-with open(fup_path, "w", encoding="utf-8") as f:
-    f.write("\n\n".join(followups))
-
-print(f"\n✅ Essay saved to: {essay_path}")
-print(f"✅ Follow-up questions saved to: {fup_path}")
-
+    print("\nNo essay content was generated.")

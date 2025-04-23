@@ -20,6 +20,7 @@ DEFAULT_MODEL = "llama3:8b"
 
 def load_archive(pickle_path):
     """Load archived data with embeddings, tags, and reasoning."""
+    # IMPORTANT: pickle_path must be passed relative to the script location (e.g. "../data/processed/embedded_chunks.pkl")
     raw = pd.read_pickle(pickle_path)
     df = pd.DataFrame(raw)
     return df

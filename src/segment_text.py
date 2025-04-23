@@ -24,10 +24,10 @@ import os
 
 from pathlib import Path
 
-# Set up file paths
-base_path = Path("/Users/flurina/NLPProjects/ai-africa-essay-tool")
-input_path = base_path / "my_writing_ai_africa.txt"
-output_path = base_path / "writing_chunks.csv"
+# Set up file paths (relative to this script's /src folder)
+base_path = Path(__file__).resolve().parent.parent  # goes one level up from /src
+input_path = base_path / "data" / "raw" / "my_writing_ai_africa.txt"
+output_path = base_path / "data" / "processed" / "writing_chunks.csv"
 
 # Load the text
 with open(input_path, "r", encoding="utf-8") as f:

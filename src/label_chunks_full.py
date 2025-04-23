@@ -4,10 +4,10 @@ label_chunks_full.py
 This script uses the local LLaMA3:8B model via Ollama to classify each chunk of text
 with 1–3 thematic tags from a fixed list, and extract the reasoning behind the classification.
 
-Input:
+Input (reads):
 - 'writing_chunks.csv'
 
-Output:
+Output (writes):
 - 'writing_chunks_labeled.csv' with columns:
   - id: chunk number
   - text: original text
@@ -50,8 +50,13 @@ Return only a comma-separated list of tags first, followed by a short explanatio
 Text:
 """
 
-input_csv = "writing_chunks.csv"
-output_csv = "writing_chunks_labeled.csv"
+from pathlib import Path
+
+# Define base directory dynamically (points one level up from /src)
+base_path = Path(__file__).resolve().parent.parent
+input_csv = base_path / "data" / "processed" / "writing_chunks.csv"
+output_csv = base_path / "data" / "processed" / "writing_chunks_labeled.csv"
+
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "llama3:8b"
 

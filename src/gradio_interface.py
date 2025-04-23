@@ -19,7 +19,7 @@ from utils import (
 )
 
 # Load archive
-data = load_archive("embedded_chunks.pkl")
+data = load_archive("../data/processed/embedded_chunks.pkl") #.. moves one level up from /src/ to /write-reflect/. From there, it goes into data/processed/embedded_chunks.pkl
 
 # Essay content store
 essay_sections = []
@@ -39,29 +39,37 @@ def add_essay_section(query, current_text, current_fups):
     prompt = format_chunks_as_context(top_chunks, query)
     result = query_llm(prompt)
 
-    # Split on marker
+    # Extract essay body and follow-up section
     if "--- FOLLOW-UP-BEGIN ---" in result:
         main, fup_raw = result.split("--- FOLLOW-UP-BEGIN ---", 1)
         followup_lines = [
-            line.strip() for line in fup_raw.strip().splitlines()
-            if line.strip().startswith(("1.", "2.", "3."))
+            line.strip()
+            for line in fup_raw.strip().splitlines()
+            if line.strip() and line.strip()[0].isdigit()
         ]
-        fup_clean = "\n".join(followup_lines)
+        fup_clean = "\n".join(followup_lines).strip()
     else:
         main = result.strip()
         fup_clean = ""
 
+    # Format and store essay section
     section_text = f"[Prompt: {query}]\n{main.strip()}"
     essay_sections.append(section_text)
+
+    # Format and store follow-ups
     if fup_clean:
         followups.append(fup_clean)
 
-    combined = current_text.strip() + "\n\n---\n\n" + section_text.strip()
+    combined_essay = current_text.strip() + "\n\n---\n\n" + section_text.strip()
     combined_fups = current_fups.strip()
     if fup_clean:
         combined_fups += "\n\n--- Follow-up Questions ---\n" + fup_clean
 
-    return combined.strip(), "", gr.update(value=combined_fups.strip(), visible=bool(combined_fups.strip()))
+    return (
+        combined_essay.strip(),
+        "",  # clears input field
+        gr.update(value=combined_fups.strip(), visible=True)
+    )
 
 # Undo last section
 def undo_last():

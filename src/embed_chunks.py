@@ -16,9 +16,14 @@ This enables future semantic search: finding the most relevant text chunks for a
 from sentence_transformers import SentenceTransformer
 import pandas as pd
 import pickle
+from pathlib import Path
+
+# Set base directory and file paths
+base_path = Path(__file__).resolve().parent.parent
+input_path = base_path / "data" / "processed" / "writing_chunks_labeled.csv"
+output_path = base_path / "data" / "processed" / "embedded_chunks.pkl"
 
 # Load the labeled chunks
-input_path = "writing_chunks_labeled.csv"
 df = pd.read_csv(input_path)
 
 # Load the sentence-transformers model
@@ -42,8 +47,7 @@ for i, row in df.iterrows():
     })
 
 # Save to pickle for later use
-output_path = "embedded_chunks.pkl"
 with open(output_path, "wb") as f:
     pickle.dump(embedded_data, f)
 
-print(f"\n Embedded {len(embedded_data)} chunks and saved to: {output_path}")
+print(f"\n✅ Embedded {len(embedded_data)} chunks and saved to: {output_path}")
