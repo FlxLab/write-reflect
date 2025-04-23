@@ -1,0 +1,31 @@
+# Directories to ignore
+/data/
+/outputs/
+/docs/
+
+# Personal files
+my_writing_ai_africa.txt
+source_materials.txt
+*_output.txt
+*_result.txt
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large binary files
+*.pkl
+*.model
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
