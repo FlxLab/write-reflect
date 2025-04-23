@@ -15,11 +15,14 @@ from utils import (
     get_top_chunks,
     format_chunks_as_context,
     format_chunks_for_qa,
-    query_llm
+    query_llm,
+    project_path
 )
 
+
 # Load archive
-data = load_archive("../data/processed/embedded_chunks.pkl") #.. moves one level up from /src/ to /write-reflect/. From there, it goes into data/processed/embedded_chunks.pkl
+data = load_archive(project_path("data", "processed", "embedded_chunks.pkl"))
+
 
 # Essay content store
 essay_sections = []

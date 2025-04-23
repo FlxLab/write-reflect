@@ -7,13 +7,13 @@ This script allows you to type a reflective question and receive a short, though
 It uses the utils.py module for all core logic (embedding, similarity search, formatting, LLM call).
 """
 
-from utils import load_archive, embed_query, get_top_chunks, format_chunks_for_qa, query_llm
+from utils import load_archive, embed_query, get_top_chunks, format_chunks_for_qa, query_llm, project_path
 
 from pathlib import Path
 
 # Load archive
 base_path = Path(__file__).resolve().parent.parent
-data = load_archive(base_path / "data" / "processed" / "embedded_chunks.pkl")
+data = load_archive(project_path("data", "processed", "embedded_chunks.pkl"))
 
 print("\nWelcome to the Modular Q&A Companion 💬")
 print("Ask reflective questions to explore your archive.\n")

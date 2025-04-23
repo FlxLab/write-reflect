@@ -11,6 +11,16 @@ from sentence_transformers import SentenceTransformer, util
 import pandas as pd
 import requests
 
+from pathlib import Path
+
+# Define the root directory (automatically detects project base)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+def project_path(*subdirs):
+    """Returns absolute path from project root by joining subfolders"""
+    return PROJECT_ROOT.joinpath(*subdirs)
+
+
 # Load the embedding model once
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -91,16 +101,17 @@ Offer a thoughtful, grounded response based on the ideas below. Speak in your ow
 
 Respond in a warm, intelligent tone. Use 1–2 short paragraphs.
 
-At the end, write exactly:
+{formatted_chunks}
+
+At the end of your response, write:
 --- FOLLOW-UP-BEGIN ---
 
 Then provide 2–3 follow-up questions for deeper thought.
 
-{formatted_chunks}
-
 Your response:
 """
     return prompt.strip()
+
 
 
 

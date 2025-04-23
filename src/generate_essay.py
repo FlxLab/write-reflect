@@ -9,10 +9,11 @@ Includes automatic saving of the final essay + follow-up questions to user-speci
 """
 
 import os
-from utils import load_archive, embed_query, get_top_chunks, format_chunks_as_context, query_llm
+from utils import load_archive, embed_query, get_top_chunks, format_chunks_as_context, query_llm, project_path
 
 # Load embedded archive (DataFrame with id, text, tags, reasoning, embedding)
-data = load_archive("../data/processed/embedded_chunks.pkl")
+data = load_archive(project_path("data", "processed", "embedded_chunks.pkl"))
+
 
 
 # Store the essay parts and follow-ups
